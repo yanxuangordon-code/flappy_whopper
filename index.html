@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Wopper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #87CEEB, #E0F7FA);
+        }
+        
+        #game-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        #score-display {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 60px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+            z-index: 10;
+            font-family: 'Bebas Neue', sans-serif;
+        }
+        
+        #start-screen, #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            z-index: 20;
+        }
+        
+        #game-over-screen {
+            display: none;
+        }
+        
+        h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #FFD700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+            font-family: 'Bebas Neue', sans-serif;
+            letter-spacing: 2px;
+        }
+        
+        h2 {
+            font-size: 36px;
+            margin-bottom: 30px;
+            color: #FF6B6B;
+            font-family: 'Bebas Neue', sans-serif;
+        }
+        
+        p {
+            font-size: 20px;
+            margin: 10px 0;
+            max-width: 80%;
+            line-height: 1.5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .highlight {
+            color: #4ECDC4;
+            font-weight: bold;
+        }
+        
+        #final-score {
+            font-size: 28px;
+            margin: 20px 0;
+            color: #FFE66D;
+            font-family: 'Bebas Neue', sans-serif;
+        }
+        
+        button {
+            background: linear-gradient(to bottom, #FF6B6B, #FF8E53);
+            color: white;
+            border: none;
+            padding: 15px 35px;
+            font-size: 22px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 20px;
+            pointer-events: auto;
+            transition: all 0.2s;
+            box-shadow: 0 4px 0 #C44569;
+            font-family: 'Bebas Neue', sans-serif;
+            letter-spacing: 1px;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 0 #C44569;
+        }
+        
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #C44569;
+        }
+        
+        .instructions {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+            font-size: 18px;
+            max-width: 80%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .wopper-icon {
+            font-size: 100px;
+            margin: 20px 0;
+            animation: float 2s infinite ease-in-out;
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        #ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 20px;
+            background: linear-gradient(to bottom, #8B4513, #A0522D);
+            z-index: 5;
+        }
+        
+        .pipe {
+            position: absolute;
+            width: 70px;
+            background: linear-gradient(to right, #2E8B57, #3CB371);
+            border: 3px solid #1E5631;
+            border-radius: 5px;
+        }
+        
+        .pipe-top {
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+        }
+        
+        .pipe-bottom {
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+        }
+        
+        .cloud {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        
+        .star {
+            position: absolute;
+            color: yellow;
+            font-size: 20px;
+            pointer-events: none;
+            opacity: 0;
+        }
+        
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            border-radius: 50%;
+        }
+        
+        .game-title {
+            font-size: 48px;
+            color: #FFD700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+            font-family: 'Bebas Neue', sans-serif;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+        
+        .subtitle {
+            font-size: 24px;
+            color: white;
+            margin-bottom: 30px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .control-info {
+            font-size: 22px;
+            color: #4ECDC4;
+            margin: 20px 0;
+            font-weight: bold;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .difficulty-indicator {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 16px;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .wopper-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .wopper-image {
+            width: 120px;
+            height: auto;
+            margin: 20px 0;
+            animation: bounce 1s infinite ease-in-out;
+        }
+        
+        @keyframes bounce {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="ui-overlay">
+            <div id="score-display">0</div>
+            
+            <div id="start-screen">
+                <h1 class="game-title">FLAPPY WOPPER</h1>
+                <div class="wopper-container">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAiIGhlaWdodD0iMTIwIiB2aWV3Qm94PSIwIDAgMTIwIDEyMCI+CiAgICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgZmlsbD0ibm9uZSIvPgogICAgPGNpcmNsZSBjeD0iNjAiIGN5PSIzNSIgcj0iMzAiIGZpbGw9IiNEMjY5MUUiIHN0cm9rZT0iI0Y1REVCMyIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjI1IiByPSIyIiBmaWxsPSIjRjVERUIzIi8+CiAgICA8Y2lyY2xlIGN4PSI3MCIgY3k9IjI1IiByPSIyIiBmaWxsPSIjRjVERUIzIi8+CiAgICA8Y2lyY2xlIGN4PSI2MCIgY3k9IjI1IiByPSIyIiBmaWxsPSIjRjVERUIzIi8+CiAgICA8Y2lyY2xlIGN4PSI0MCIgY3k9IjI1IiByPSIyIiBmaWxsPSIjRjVERUIzIi8+CiAgICA8Y2lyY2xlIGN4PSI4MCIgY3k9IjI1IiByPSIyIiBmaWxsPSIjRjVERUIzIi8+CiAgICA8cmVjdCB4PSIyMCIgeT0iNTAiIHdpZHRoPSI4MCIgaGVpZ2h0PSIyMCIgZmlsbD0iI0ZGNjM0NyIvPgogICAgPHJlY3QgeD0iMjAiIHk9Ijc1IiB3aWR0aD0iODAiIGhlaWdodD0iMTUiIGZpbGw9IiNGRkQ3MDAiLz4KICAgIDxyZWN0IHg9IjIwIiB5PSI5MCIgd2lkdGg9IjgwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjOTBFRTkwIi8+CiAgICA8cmVjdCB4PSIyMCIgeT0iMTAwIiB3aWR0aD0iODAiIGhlaWdodD0iMTAiIGZpbGw9IiNEMjY5MUUiLz4KICAgIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTEwIiByPSIyIiBmaWxsPSIjRjVERUIzIi8+CiAgICA8Y2lyY2xlIGN4PSI3MCIgY3k9IjExMCIgcj0iMiIgZmlsbD0iI0Y1REVCMyIvPgogICAgPGNpcmNsZSBjeD0iNjAiIGN5PSIxMTAiIHI9IjIiIGZpbGw9IiNGNURFQjMiLz4KPC9zdmc+" class="wopper-image" alt="Wopper">
+                </div>
+                <p class="subtitle">Help the Wopper navigate through the pipes!</p>
+                <p class="control-info">Press <span class="highlight">SPACE</span> or <span class="highlight">CLICK</span> to flap</p>
+                <div class="instructions">
+                    <p>Avoid pipes and don't hit the ground!</p>
+                    <p>Each pipe passed = 1 point</p>
+                    <p>The game gets faster as you score more points!</p>
+                </div>
+                <button id="start-btn">START GAME</button>
+            </div>
+            
+            <div id="game-over-screen">
+                <h2>GAME OVER</h2>
+                <div class="wopper-container">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAiIGhlaWdodD0iMTIwIiB2aWV3Qm94PSIwIDAgMTIwIDEyMCI+CiAgICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgZmlsbD0ibm9uZSIvPgogICAgPGNpcmNsZSBjeD0iNjAiIGN5PSIzNSIgcj0iMzAiIGZpbGw9IiNEMjY5MUUiIHN0cm9rZT0iI0Y1REVCMyIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjI1IiByPSIyIiBmaWxsPSIjRjVERUIzIi8+CiAgICA8Y2lyY2xlIGN4PSI3MCIgY3k9IjI1IiByPSIyIiBmaWxsPSIjRjVERUIzIi8+CiAgICA8Y2lyY2xlIGN4PSI2MCIgY3k9IjI1IiByPSIyIiBmaWxsPSIjRjVERUIzIi8+CiAgICA8Y2lyY2xlIGN4PSI0MCIgY3k9IjI1IiByPSIyIiBmaWxsPSIjRjVERUIzIi8+CiAgICA8Y2lyY2xlIGN4PSI4MCIgY3k9IjI1IiByPSIyIiBmaWxsPSIjRjVERUIzIi8+CiAgICA8cmVjdCB4PSIyMCIgeT0iNTAiIHdpZHRoPSI4MCIgaGVpZ2h0PSIyMCIgZmlsbD0iI0ZGNjM0NyIvPgogICAgPHJlY3QgeD0iMjAiIHk9Ijc1IiB3aWR0aD0iODAiIGhlaWdodD0iMTUiIGZpbGw9IiNGRkQ3MDAiLz4KICAgIDxyZWN0IHg9IjIwIiB5PSI5MCIgd2lkdGg9IjgwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjOTBFRTkwIi8+CiAgICA8cmVjdCB4PSIyMCIgeT0iMTAwIiB3aWR0aD0iODAiIGhlaWdodD0iMTAiIGZpbGw9IiNEMjY5MUUiLz4KICAgIDxjaXJjbGUgY3g9IjUwIiBjeT0iMTEwIiByPSIyIiBmaWxsPSIjRjVERUIzIi8+CiAgICA8Y2lyY2xlIGN4PSI3MCIgY3k9IjExMCIgcj0iMiIgZmlsbD0iI0Y1REVCMyIvPgogICAgPGNpcmNsZSBjeD0iNjAiIGN5PSIxMTAiIHI9IjIiIGZpbGw9IiNGNURFQjMiLz4KICAgIDxjaXJjbGUgY3g9IjYwIiBjeT0iNjAiIHI9IjIwIiBmaWxsPSIjRkY2QjZCIi8+CiAgICA8cGF0aCBkPSJNNDAsNzAgTTYwLDYwIEw4MCw3MCBNNjAsNzAgTDYwLDgwIiBzdHJva2U9IiNGRkQ3MDAiIHN0cm9rZS13aWR0aD0iNiIgZmlsbD0ibm9uZSIvPgogICAgPHBhdGggZD0iTTEwLDExMCBMNTAsMTAwIEw2MCwxMTAgTDcwLDEwMCBMMTAwLDExMCIgc3Ryb2tlPSIjRkY2QjZCIiBzdHJva2Utd2lkdGg9IjYiIGZpbGw9Im5vbmUiLz4KPC9zdmc+" class="wopper-image" alt="Exploded Wopper">
+                </div>
+                <p>Your Wopper couldn't make it...</p>
+                <div id="final-score">Score: 0</div>
+                <button id="restart-btn">PLAY AGAIN</button>
+            </div>
+            
+            <div id="ground"></div>
+            <div id="difficulty-indicator" class="difficulty-indicator">Speed: Normal</div>
+        </div>
+    </div>
+
+    <script>
+        // Game constants
+        const GRAVITY = 0.5;
+        const FLAP_STRENGTH = -8; // Reduced for easier gameplay
+        const PIPE_WIDTH = 70;
+        const PIPE_GAP = 200; // Increased gap for easier gameplay
+        const PIPE_SPEED = 2; // Slower speed for easier gameplay
+        const GROUND_HEIGHT = 20;
+        const BIRD_SIZE = 40;
+        
+        // Game variables
+        let canvas, ctx;
+        let wopper;
+        let pipes = [];
+        let score = 0;
+        let gameRunning = false;
+        let frames = 0;
+        let lastPipeTime = 0;
+        let pipeInterval = 2000; // Increased interval for easier gameplay
+        let difficultyMultiplier = 1;
+        let gameLoopId = null;
+        let stars = [];
+        let clouds = [];
+        let particles = [];
+        let particleIndex = 0;
+        let isFlapping = false;
+        let flapAnimationFrames = 0;
+        
+        // DOM elements
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const scoreDisplay = document.getElementById('score-display');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const difficultyIndicator = document.getElementById('difficulty-indicator');
+        
+        // Initialize game
+        function init() {
+            canvas = document.getElementById('game-canvas');
+            ctx = canvas.getContext('2d');
+            
+            // Set canvas size to match container
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Create stars
+            createStars();
+            
+            // Create clouds
+            createClouds();
+            
+            // Create particles
+            createParticles();
+            
+            // Event listeners
+            startBtn.addEventListener('click', startGame);
+            restartBtn.addEventListener('click', startGame);
+            canvas.addEventListener('click', flap);
+            document.addEventListener('keydown', (e) => {
+                if (e.code === 'Space') {
+                    flap();
+                    e.preventDefault();
+                }
+            });
+            
+            // Draw initial state
+            draw();
+        }
+        
+        // Resize canvas to match container
+        function resizeCanvas() {
+            const container = document.getElementById('game-container');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        
+        // Start the game
+        function startGame() {
+            // Cancel any existing game loop
+            if (gameLoopId) {
+                cancelAnimationFrame(gameLoopId);
+                gameLoopId = null;
+            }
+            
+            gameRunning = true;
+            score = 0;
+            frames = 0;
+            pipes = [];
+            lastPipeTime = Date.now();
+            difficultyMultiplier = 1;
+            isFlapping = false;
+            flapAnimationFrames = 0;
+            
+            // Reset wopper position
+            wopper = {
+                x: canvas.width / 3,
+                y: canvas.height / 2,
+                velocity: 0,
+                radius: BIRD_SIZE / 2,
+                rotation: 0,
+                scale: 1
+            };
+            
+            // Hide screens
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            
+            // Update score display
+            scoreDisplay.textContent = score;
+            updateDifficultyIndicator();
+            
+            // Start game loop
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+        
+        // Main game loop
+        function gameLoop() {
+            if (!gameRunning) {
+                gameLoopId = null;
+                return;
+            }
+            
+            update();
+            draw();
+            
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+        
+        // Update game state
+        function update() {
+            frames++;
+            
+            // Update wopper
+            wopper.velocity += GRAVITY * difficultyMultiplier;
+            wopper.y += wopper.velocity;
+            
+            // Rotate wopper based on velocity
+            wopper.rotation = Math.min(Math.max(wopper.velocity * 0.1, -0.5), 0.5);
+            
+            // Check ground collision
+            if (wopper.y + wopper.radius > canvas.height - GROUND_HEIGHT) {
+                gameOver();
+                return;
+            }
+            
+            // Check ceiling collision
+            if (wopper.y - wopper.radius < 0) {
+                wopper.y = wopper.radius;
+                wopper.velocity = 0;
+                wopper.rotation = -0.5;
+            }
+            
+            // Generate new pipes
+            const now = Date.now();
+            if (now - lastPipeTime > pipeInterval / difficultyMultiplier) {
+                createPipe();
+                lastPipeTime = now;
+            }
+            
+            // Update pipes and check collisions
+            for (let i = pipes.length - 1; i >= 0; i--) {
+                const pipe = pipes[i];
+                
+                // Move pipe
+                pipe.x -= PIPE_SPEED * difficultyMultiplier;
+                
+                // Remove off-screen pipes
+                if (pipe.x + PIPE_WIDTH < 0) {
+                    pipes.splice(i, 1);
+                    continue;
+                }
+                
+                // Check collision
+                if (checkCollision(wopper, pipe)) {
+                    gameOver();
+                    return;
+                }
+                
+                // Check if wopper passed the pipe
+                if (pipe.passed === false && pipe.x + PIPE_WIDTH < wopper.x) {
+                    pipe.passed = true;
+                    score++;
+                    scoreDisplay.textContent = score;
+                    
+                    // Create particle effect when passing a pipe
+                    createParticleEffect(wopper.x, wopper.y);
+                }
+            }
+            
+            // Update stars
+            updateStars();
+            
+            // Update clouds
+            updateClouds();
+            
+            // Update particles
+            updateParticles();
+            
+            // Update flap animation
+            if (isFlapping) {
+                flapAnimationFrames++;
+                if (flapAnimationFrames > 10) {
+                    isFlapping = false;
+                    flapAnimationFrames = 0;
+                }
+            }
+        }
+        
+        // Update difficulty based on score
+        function updateDifficulty() {
+            if (score >= 10) {
+                difficultyMultiplier = 1.1;
+            } else if (score >= 20) {
+                difficultyMultiplier = 1.2;
+            } else if (score >= 30) {
+                difficultyMultiplier = 1.3;
+            } else if (score >= 40) {
+                difficultyMultiplier = 1.4;
+            } else if (score >= 50) {
+                difficultyMultiplier = 1.5;
+            }
+            
+            updateDifficultyIndicator();
+        }
+        
+        // Update difficulty indicator
+        function updateDifficultyIndicator() {
+            let levelText = "Normal";
+            if (difficultyMultiplier > 1.0) {
+                levelText = "Easy";
+            }
+            difficultyIndicator.textContent = `Speed: ${levelText}`;
+        }
+        
+        // Create a new pipe
+        function createPipe() {
+            const minHeight = 50;
+            const maxHeight = canvas.height - PIPE_GAP - minHeight - GROUND_HEIGHT;
+            const height = Math.floor(Math.random() * (maxHeight - minHeight) + minHeight);
+            
+            pipes.push({
+                x: canvas.width,
+                topHeight: height,
+                bottomY: height + PIPE_GAP,
+                bottomHeight: canvas.height - height - PIPE_GAP - GROUND_HEIGHT,
+                passed: false,
+                color: getRandomPipeColor()
+            });
+        }
+        
+        // Get random pipe color
+        function getRandomPipeColor() {
+            const colors = [
+                "#2E8B57", "#3CB371", "#006400", "#8FBC8F", "#556B2F"
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+        
+        // Check collision between wopper and pipe
+        function checkCollision(wopper, pipe) {
+            // Check top pipe
+            if (
+                wopper.x + wopper.radius > pipe.x &&
+                wopper.x - wopper.radius < pipe.x + PIPE_WIDTH &&
+                wopper.y - wopper.radius < pipe.topHeight
+            ) {
+                return true;
+            }
+            
+            // Check bottom pipe
+            if (
+                wopper.x + wopper.radius > pipe.x &&
+                wopper.x - wopper.radius < pipe.x + PIPE_WIDTH &&
+                wopper.y + wopper.radius > pipe.bottomY
+            ) {
+                return true;
+            }
+            
+            return false;
+        }
+        
+        // Handle flapping
+        function flap() {
+            if (!gameRunning) return;
+            
+            wopper.velocity = FLAP_STRENGTH * difficultyMultiplier;
+            isFlapping = true;
+            flapAnimationFrames = 0;
+            
+            // Create particle effect when flapping
+            createParticleEffect(wopper.x, wopper.y);
+        }
+        
+        // Game over
+        function gameOver() {
+            gameRunning = false;
+            gameLoopId = null;
+            
+            finalScoreDisplay.textContent = `Score: ${score}`;
+            gameOverScreen.style.display = 'flex';
+        }
+        
+        // Draw everything
+        function draw() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw sky background
+            drawSky();
+            
+            // Draw stars
+            drawStars();
+            
+            // Draw clouds
+            drawClouds();
+            
+            // Draw pipes
+            drawPipes();
+            
+            // Draw wopper
+            drawWopper();
+            
+            // Draw ground
+            drawGround();
+            
+            // Draw particles
+            drawParticles();
+        }
+        
+        // Draw sky background
+        function drawSky() {
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, "#87CEEB");
+            gradient.addColorStop(1, "#E0F7FA");
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        // Create stars
+        function createStars() {
+            for (let i = 0; i < 10; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 3 + 1,
+                    opacity: Math.random() * 0.5 + 0.5,
+                    twinkleSpeed: Math.random() * 0.05 + 0.01,
+                    twinklePhase: Math.random() * Math.PI * 2
+                });
+            }
+        }
+        
+        // Update stars
+        function updateStars() {
+            stars.forEach(star => {
+                star.twinklePhase += star.twinkleSpeed;
+                star.opacity = 0.5 + 0.5 * Math.sin(star.twinklePhase);
+            });
+        }
+        
+        // Draw stars
+        function drawStars() {
+            stars.forEach(star => {
+                ctx.save();
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+        
+        // Create clouds
+        function createClouds() {
+            for (let i = 0; i < 5; i++) {
+                clouds.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * (canvas.height - 100),
+                    width: Math.random() * 100 + 50,
+                    height: Math.random() * 50 + 30,
+                    speed: Math.random() * 0.5 + 0.1,
+                    opacity: Math.random() * 0.3 + 0.2
+                });
+            }
+        }
+        
+        // Update clouds
+        function updateClouds() {
+            clouds.forEach(cloud => {
+                cloud.x -= cloud.speed * difficultyMultiplier;
+                if (cloud.x + cloud.width < 0) {
+                    cloud.x = canvas.width;
+                    cloud.y = Math.random() * (canvas.height - 100);
+                    cloud.width = Math.random() * 100 + 50;
+                    cloud.height = Math.random() * 50 + 30;
+                    cloud.opacity = Math.random() * 0.3 + 0.2;
+                }
+            });
+        }
+        
+        // Draw clouds
+        function drawClouds() {
+            clouds.forEach(cloud => {
+                ctx.save();
+                ctx.fillStyle = `rgba(255, 255, 255, ${cloud.opacity})`;
+                ctx.beginPath();
+                ctx.arc(cloud.x + cloud.width/3, cloud.y + cloud.height/2, cloud.width/4, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.width/2, cloud.y + cloud.height/2, cloud.width/3, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.width*2/3, cloud.y + cloud.height/2, cloud.width/4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+        
+        // Create particles
+        function createParticles() {
+            for (let i = 0; i < 20; i++) {
+                particles.push({
+                    x: 0,
+                    y: 0,
+                    vx: 0,
+                    vy: 0,
+                    size: 0,
+                    color: '',
+                    alpha: 0,
+                    life: 0,
+                    maxLife: 0
+                });
+            }
+        }
+        
+        // Update particles
+        function updateParticles() {
+            particles.forEach(particle => {
+                if (particle.alpha > 0) {
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    particle.vy += 0.1;
+                    particle.alpha -= 0.02;
+                    particle.life--;
+                    
+                    if (particle.life <= 0 || particle.alpha <= 0) {
+                        particle.alpha = 0;
+                    }
+                }
+            });
+        }
+        
+        // Create particle effect
+        function createParticleEffect(x, y) {
+            for (let i = 0; i < 5; i++) {
+                const index = particleIndex % 20;
+                particleIndex++;
+                
+                particles[index].x = x;
+                particles[index].y = y;
+                particles[index].vx = (Math.random() - 0.5) * 4;
+                particles[index].vy = (Math.random() - 0.5) * 4;
+                particles[index].size = Math.random() * 4 + 2;
+                particles[index].color = ['#FF6B6B', '#FFD700', '#4ECDC4'][Math.floor(Math.random() * 3)];
+                particles[index].alpha = 1;
+                particles[index].life = 30;
+                particles[index].maxLife = 30;
+            }
+        }
+        
+        // Draw particles
+        function drawParticles() {
+            particles.forEach(particle => {
+                if (particle.alpha > 0) {
+                    ctx.save();
+                    ctx.globalAlpha = particle.alpha;
+                    ctx.fillStyle = particle.color;
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            });
+        }
+        
+        // Draw pipes
+        function drawPipes() {
+            pipes.forEach(pipe => {
+                // Top pipe
+                ctx.fillStyle = pipe.color;
+                ctx.strokeStyle = "#1E5631";
+                ctx.lineWidth = 3;
+                
+                ctx.beginPath();
+                ctx.rect(pipe.x, 0, PIPE_WIDTH, pipe.topHeight);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Pipe cap
+                ctx.fillStyle = `${pipe.color}CC`;
+                ctx.fillRect(pipe.x - 5, pipe.topHeight - 20, PIPE_WIDTH + 10, 20);
+                
+                // Bottom pipe
+                ctx.beginPath();
+                ctx.rect(pipe.x, pipe.bottomY, PIPE_WIDTH, pipe.bottomHeight);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Pipe cap
+                ctx.fillRect(pipe.x - 5, pipe.bottomY, PIPE_WIDTH + 10, 20);
+            });
+        }
+        
+        // Draw wopper (burger)
+        function drawWopper() {
+            if (!wopper) return;
+            
+            const x = wopper.x;
+            const y = wopper.y;
+            const size = BIRD_SIZE;
+            const scale = wopper.scale;
+            const rotation = wopper.rotation;
+            
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rotation);
+            ctx.scale(scale, scale);
+            
+            // Burger bun top
+            ctx.fillStyle = "#D2691E";
+            ctx.beginPath();
+            ctx.ellipse(0, -size/3, size/1.8, size/4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Sesame seeds
+            ctx.fillStyle = "#F5DEB3";
+            ctx.beginPath();
+            ctx.arc(-10, -size/3 - 3, 2, 0, Math.PI * 2);
+            ctx.arc(5, -size/3 - 5, 2, 0, Math.PI * 2);
+            ctx.arc(12, -size/3 - 2, 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Lettuce
+            ctx.fillStyle = "#90EE90";
+            ctx.beginPath();
+            ctx.ellipse(0, 0, size/1.8, size/8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Tomato
+            ctx.fillStyle = "#FF6347";
+            ctx.beginPath();
+            ctx.ellipse(0, size/6, size/1.8, size/8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Cheese
+            ctx.fillStyle = "#FFD700";
+            ctx.beginPath();
+            ctx.ellipse(0, size/3, size/1.8, size/8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Patty
+            ctx.fillStyle = "#8B4513";
+            ctx.beginPath();
+            ctx.ellipse(0, size/2, size/1.8, size/6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Burger bun bottom
+            ctx.fillStyle = "#D2691E";
+            ctx.beginPath();
+            ctx.ellipse(0, size*0.7, size/1.8, size/4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Eyes
+            ctx.fillStyle = "white";
+            ctx.beginPath();
+            ctx.arc(-8, -5, 5, 0, Math.PI * 2);
+            ctx.arc(8, -5, 5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = "black";
+            ctx.beginPath();
+            ctx.arc(-8, -5, 2, 0, Math.PI * 2);
+            ctx.arc(8, -5, 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Blush
+            ctx.fillStyle = "rgba(255, 182, 193, 0.5)";
+            ctx.beginPath();
+            ctx.arc(-15, 5, 6, 0, Math.PI * 2);
+            ctx.arc(15, 5, 6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Mouth (smile when flapping, neutral otherwise)
+            if (isFlapping) {
+                ctx.fillStyle = "#FF6B6B";
+                ctx.beginPath();
+                ctx.arc(0, 5, 4, 0, Math.PI);
+                ctx.fill();
+            } else {
+                ctx.fillStyle = "#FF6B6B";
+                ctx.beginPath();
+                ctx.arc(0, 5, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            ctx.restore();
+        }
+        
+        // Draw ground
+        function drawGround() {
+            ctx.fillStyle = "#8B4513";
+            ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
+            
+            // Grass details
+            ctx.fillStyle = "#228B22";
+            for (let i = 0; i < canvas.width; i += 20) {
+                ctx.beginPath();
+                ctx.moveTo(i, canvas.height - GROUND_HEIGHT);
+                ctx.lineTo(i + 10, canvas.height - GROUND_HEIGHT - 10);
+                ctx.lineTo(i + 20, canvas.height - GROUND_HEIGHT);
+                ctx.fill();
+            }
+        }
+        
+        // Initialize the game when page loads
+        window.onload = init;
+    </script>
+</body>
+</html>
